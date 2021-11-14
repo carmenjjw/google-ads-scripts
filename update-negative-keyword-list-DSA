@@ -1,0 +1,78 @@
+
+//This works when there is already one or more NKL in the account dedicaded for DSA. OPS *doesn't not work for MCC*
+//Date created: 20211113
+//Last edited: 
+//By Carmen Jiang @ Vekst
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function main() {
+  
+  //get all existing keyowrds
+  var keywordIterator = AdsApp.keywords()
+      .withCondition('CampaignStatus = ENABLED')
+      .withCondition('AdGroupStatus = ENABLED')
+      .withCondition('Status = ENABLED')
+      .withLimit(5) /*change it to 3000 if necessary, which is the limit for a NKL*/
+      .get();
+ 
+  //create an array for all the keywords in the account
+  var list = [];
+  while (keywordIterator.hasNext()) { 
+   var keyword = keywordIterator.next()
+   list.push(keyword.getText())
+    }
+  
+  //deduplicate
+   while (keywordIterator.hasNext()) {
+        var keyword = keywordIterator.next();
+        var text = keyword.getText();
+        if (list.indexOf(text)) {
+            continue;
+        } else {
+            list.push(text);
+        }
+   }
+ 
+ 
+  //locate the existing NKL and take away all the keywords
+ 
+  var NKLSelector = AdsApp.negativeKeywordLists()
+    .withCondition("Name CONTAINS Competitors")
+
+ 
+  var NKLIterator = NKLSelector.get()
+     while (NKLIterator.hasNext()) {
+      var negativeKeywordList = NKLIterator.next();
+      var negativeKeywordsIterator = negativeKeywordList.negativeKeywords()
+        .withLimit(10).get() /*only delete 10 keywords. Comment out when deleting the whole list*/
+      
+     while(negativeKeywordsIterator.hasNext()){
+     var negativeKeyword = negativeKeywordsIterator.next()
+     negativeKeyword.remove()
+     }
+ 
+     //now the NKL is empty. add all the deduplicated keywords back into the NKL
+     negativeKeywordList.addNegativeKeywords(list)
+ }
+
+  
+  // then add that NKL to our DSA campaign/campaigns
+     var DSAIterator = AdsApp.campaigns()
+          .withCondition("Name CONTAINS _DSA_") /*change it to how you named your DSA campaign*/
+          .get();
+      
+     if (DSAIterator.totalNumEntities() == 1) {
+    // if there is only one DSA campaign, apply the new list to that canpaign
+    DSAIterator.next().addNegativeKeywordList(negativeKeywordList)
+    } else if(DSAIterator.hasNext()){
+    // if there is more than one DSA campaigns, apply the new list to
+    // all the DSA campaigns
+    DSAIterator.next().addNegativeKeywordList(negativeKeywordList)
+    } else {
+    //handle error    
+    Logger.log("Add NKL to DSA failed.")
+          }
+    
+}/*main function ends*/
+
+

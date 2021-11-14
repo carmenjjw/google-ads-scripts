@@ -1,0 +1,57 @@
+
+//This works when there is no NKL in the account dedicaded for DSA. There is another script for updating purposes.
+//Date created: 20211113
+//Last edited: 
+//By Carmen Jiang
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function main() {
+  
+  //get all existing keyowrds
+  var keywordIterator = AdsApp.keywords()
+      .withCondition('CampaignStatus = ENABLED')
+      .withCondition('AdGroupStatus = ENABLED')
+      .withCondition('Status = ENABLED')
+      .withLimit(20) /*change it to 3000 if necessary*/
+      .get();
+ 
+  //create an array with all the keywords
+  var list = [];
+ 
+  //deduplicate
+   while (keywordIterator.hasNext()) {
+        var keyword = keywordIterator.next();
+        var text = keyword.getText();
+        if (list.indexOf(text)) {
+            continue;
+        } else {
+            list.push(text);
+        }
+   }
+   
+   
+  // create an empty NKL
+  var newNKL = AdsApp.newNegativeKeywordListBuilder()
+    .withName("Test_DSA_All-keywords") /*change it to a new name*/
+    .build()
+
+ 
+  //add all the keywords into the NKL, then add that NKL to our DSA campaign/campaigns
+  if(newNKL.isSuccessful()){
+    var NKLResult = newNKL.getResult()
+    NKLResult.addNegativeKeywords(list) /*here it accepts an array*/
+    
+    var DSAIterator = AdsApp.campaigns()
+      .withCondition("Name CONTAINS _DSA_") /*change it to how you named your DSA campaign*/
+      .withCondition("CampaignStatus = ENABLED")
+      .get();
+    DSAIterator.next().addNegativeKeywordList(NKLResult)
+    
+  }else {
+    Logger.log('Could not add Negative Keyword List.')
+  }
+ 
+   
+}/*main function ends*/
+
+
